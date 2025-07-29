@@ -96,15 +96,20 @@
         <input type="file" id="imageInput" accept="image/*">
         <p>
             <label for="widthInput">New Width:</label>
-            <input type="number" id="widthInput" value="800"> px
+            <input type="number" id="widthInput" value="800"> cm
         </p>
         <p>
             <label for="heightInput">New Height:</label>
-            <input type="number" id="heightInput" placeholder="Auto" value=""> px
+            <input type="number" id="heightInput" placeholder="Auto" value=""> cm
         </p>
         <p>
             <label for="targetSizeInput">Target Size:</label>
             <input type="number" id="targetSizeInput" placeholder="Leave blank for dimensions" value="" min="1"> KB
+        </p>
+        
+        <p>
+            <label for="dpiInput">DPI (Pixels Per Inch):</label>
+            <input type="number" id="dpiInput" value="300" min="1">
         </p>
 
         <button id="resizeButton">Resize Image</button>
@@ -127,11 +132,24 @@
         const message = document.getElementById('message');
         const ctx = imageCanvas.getContext('2d');
 
-        const targetSizeInput = document.getElementById('targetSizeInput'); 
+        const targetSizeInput = document.getElementById('targetSizeInput');
+        const dpiInput = document.getElementById('dpiInput'); // Get the new DPI input
 
         let originalImage = null;
-        let lastOperationQuality = 0.9; // Stores final quality for download, starts high
-        let lastOperationDownloadFormat = 'image/png'; // Stores final format for download
+        let lastOperationQuality = 0.9;
+        let lastOperationDownloadFormat = 'image/png';
+
+        const CM_PER_INCH = 2.54; // 1 inch = 2.54 cm
+
+        // Helper function to convert CM to Pixels
+        const cmToPx = (cm, dpi) => {
+            return (cm / CM_PER_INCH) * dpi;
+        };
+
+        // Helper function to convert Pixels to CM for display messages
+        const pxToCm = (px, dpi) => {
+            return (px / dpi) * CM_PER_INCH;
+        };
 
         imageInput.addEventListener('change', (event) => {
             const file = event.target.files[0];
@@ -152,18 +170,22 @@
             reader.onload = (e) => {
                 originalImage = new Image();
                 originalImage.onload = () => {
-                    message.textContent = `Original: ${originalImage.width}x${originalImage.height}px. Set new dimensions and/or target size.`;
-                    widthInput.value = originalImage.width;
-                    heightInput.value = originalImage.height;
-                    targetSizeInput.value = ''; // Clear target size input on new image
+                    const currentDPI = parseInt(dpiInput.value) || 300; // Use current DPI from input
+                    const originalWidthCm = pxToCm(originalImage.width, currentDPI).toFixed(2);
+                    const originalHeightCm = pxToCm(originalImage.height, currentDPI).toFixed(2);
+                    message.textContent = `Original: ${originalWidthCm}cm x ${originalHeightCm}cm (${originalImage.width}x${originalImage.height}px). Set new dimensions and/or target size.`;
+                    
+                    widthInput.value = originalWidthCm;
+                    heightInput.value = originalHeightCm;
+                    targetSizeInput.value = '';
 
                     imageCanvas.width = originalImage.width;
                     imageCanvas.height = originalImage.height;
                     ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
                     ctx.drawImage(originalImage, 0, 0);
 
-                    lastOperationQuality = 0.9; // Reset quality for new image
-                    lastOperationDownloadFormat = 'image/png'; // Reset format
+                    lastOperationQuality = 0.9;
+                    lastOperationDownloadFormat = 'image/png';
                 };
                 originalImage.onerror = () => {
                     message.textContent = 'Could not load image. It might be corrupted or unsupported.';
@@ -183,117 +205,120 @@
                 return;
             }
 
-            let newWidth = parseInt(widthInput.value);
-            let newHeight = parseInt(heightInput.value);
+            const currentDPI = parseInt(dpiInput.value) || 300; // Get DPI value from input
+            if (currentDPI <= 0) {
+                message.textContent = 'DPI must be a positive number.';
+                return;
+            }
+
+            let newWidthCm = parseFloat(widthInput.value);
+            let newHeightCm = parseFloat(heightInput.value);
             const targetKB = parseInt(targetSizeInput.value);
             
-            // --- Step 1: Handle Dimension Resizing ---
-            // Determine final dimensions
-            let finalWidth = originalImage.width;
-            let finalHeight = originalImage.height;
+            let finalWidthPx = originalImage.width;
+            let finalHeightPx = originalImage.height;
 
-            const hasDimensionInput = (!isNaN(newWidth) && newWidth > 0) || (!isNaN(newHeight) && newHeight > 0);
+            const hasDimensionInput = (!isNaN(newWidthCm) && newWidthCm > 0) || (!isNaN(newHeightCm) && newHeightCm > 0);
 
             if (hasDimensionInput) {
-                // If width is provided, prioritize it
-                if (!isNaN(newWidth) && newWidth > 0) {
-                    finalWidth = newWidth;
-                    if (isNaN(newHeight) || newHeight <= 0) { // If height not provided or invalid, calculate
-                        finalHeight = (originalImage.height / originalImage.width) * finalWidth;
+                if (!isNaN(newWidthCm) && newWidthCm > 0) {
+                    finalWidthPx = cmToPx(newWidthCm, currentDPI); // Use currentDPI for conversion
+                    if (isNaN(newHeightCm) || newHeightCm <= 0) {
+                        finalHeightPx = (originalImage.height / originalImage.width) * finalWidthPx;
                     } else {
-                        finalHeight = newHeight;
+                        finalHeightPx = cmToPx(newHeightCm, currentDPI); // Use currentDPI for conversion
                     }
                 } 
-                // If only height is provided, prioritize it
-                else if (!isNaN(newHeight) && newHeight > 0) {
-                    finalHeight = newHeight;
-                    finalWidth = (originalImage.width / originalImage.height) * finalHeight;
+                else if (!isNaN(newHeightCm) && newHeightCm > 0) {
+                    finalHeightPx = cmToPx(newHeightCm, currentDPI); // Use currentDPI for conversion
+                    finalWidthPx = (originalImage.width / originalImage.height) * finalHeightPx;
                 }
 
-                // Ensure dimensions are positive after calculation
-                if (finalWidth <= 0 || finalHeight <= 0) {
+                if (finalWidthPx <= 0 || finalHeightPx <= 0) {
                     message.textContent = 'Calculated dimensions are invalid. Please check input.';
                     return;
                 }
 
                 message.textContent = 'Resizing by dimensions...';
-                imageCanvas.width = finalWidth;
-                imageCanvas.height = finalHeight;
+                imageCanvas.width = finalWidthPx;
+                imageCanvas.height = finalHeightPx;
                 ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
-                ctx.drawImage(originalImage, 0, 0, finalWidth, finalHeight);
-                message.textContent = `Image resized to ${Math.round(finalWidth)}x${Math.round(finalHeight)}px.`;
-                lastOperationDownloadFormat = 'image/png'; // Default for dimension resize, assuming no size constraint
+                ctx.drawImage(originalImage, 0, 0, finalWidthPx, finalHeightPx);
+                
+                const resizedWidthCm = pxToCm(finalWidthPx, currentDPI).toFixed(2); // Use currentDPI for display
+                const resizedHeightCm = pxToCm(finalHeightPx, currentDPI).toFixed(2); // Use currentDPI for display
+                message.textContent = `Image resized to ${resizedWidthCm}cm x ${resizedHeightCm}cm (${Math.round(finalWidthPx)}x${Math.round(finalHeightPx)}px).`;
+                lastOperationDownloadFormat = 'image/png';
             } else {
-                // If no dimension input, use original image dimensions for canvas setup
                 imageCanvas.width = originalImage.width;
                 imageCanvas.height = originalImage.height;
                 ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
                 ctx.drawImage(originalImage, 0, 0);
-                message.textContent = `Using original dimensions: ${originalImage.width}x${originalImage.height}px.`;
-                lastOperationDownloadFormat = 'image/png'; // Default if only target size is used without dimension
+                const originalWidthCm = pxToCm(originalImage.width, currentDPI).toFixed(2);
+                const originalHeightCm = pxToCm(originalImage.height, currentDPI).toFixed(2);
+                message.textContent = `Using original dimensions: ${originalWidthCm}cm x ${originalHeightCm}cm (${originalImage.width}x${originalImage.height}px).`;
+                lastOperationDownloadFormat = 'image/png';
             }
             
-            // --- Step 2: Handle File Size Optimization (if targetKB is provided) ---
             if (!isNaN(targetKB) && targetKB > 0) {
                 message.textContent += ` Optimizing to ~${targetKB} KB...`;
-                downloadButton.style.display = 'none'; // Hide until optimization is done
+                downloadButton.style.display = 'none';
 
                 const targetBytes = targetKB * 1024;
-                let currentQuality = 0.9; // Start with high quality for JPEG
+                let currentQuality = 0.9;
 
                 const MAX_ITERATIONS = 50;
                 let iteration = 0;
                 let lastBlobSize = Infinity; 
-                let finalBlob = null; // Store the best blob found
-
-                // Function to get blob from current canvas state
+                
                 const getCanvasBlob = (quality) => {
                     return new Promise(resolve => {
                         imageCanvas.toBlob(blob => {
                             resolve(blob);
-                        }, 'image/jpeg', quality); // Always output as JPEG for quality control
+                        }, 'image/jpeg', quality);
                     });
                 };
 
                 while (iteration < MAX_ITERATIONS) {
                     const blob = await getCanvasBlob(currentQuality);
                     const currentSize = blob ? blob.size : Infinity;
-                    finalBlob = blob; // Keep track of the latest blob
-
+                    
                     if (currentSize <= targetBytes || currentQuality <= 0.01) {
-                        message.textContent = `Final: ${Math.round(imageCanvas.width)}x${Math.round(imageCanvas.height)}px, approx ${Math.round(currentSize / 1024)} KB.`;
+                        const finalWidthCm = pxToCm(imageCanvas.width, currentDPI).toFixed(2);
+                        const finalHeightCm = pxToCm(imageCanvas.height, currentDPI).toFixed(2);
+                        message.textContent = `Final: ${finalWidthCm}cm x ${finalHeightCm}cm (${Math.round(imageCanvas.width)}x${Math.round(imageCanvas.height)}px), approx ${Math.round(currentSize / 1024)} KB.`;
                         lastOperationQuality = currentQuality;
                         lastOperationDownloadFormat = 'image/jpeg';
                         downloadButton.style.display = 'inline-block';
                         break;
                     }
 
-                    // Reduce quality
                     if (currentQuality > 0.01) {
                         currentQuality -= 0.05;
                         if (currentQuality < 0.01) currentQuality = 0.01;
                     } else {
-                        // Cannot optimize further by quality at current dimensions
-                        message.textContent = `Could not reach ${targetKB} KB at current dimensions. Final: ${Math.round(imageCanvas.width)}x${Math.round(imageCanvas.height)}px, approx ${Math.round(currentSize / 1024)} KB.`;
+                        const finalWidthCm = pxToCm(imageCanvas.width, currentDPI).toFixed(2);
+                        const finalHeightCm = pxToCm(imageCanvas.height, currentDPI).toFixed(2);
+                        message.textContent = `Could not reach ${targetKB} KB at current dimensions. Final: ${finalWidthCm}cm x ${finalHeightCm}cm (${Math.round(imageCanvas.width)}x${Math.round(imageCanvas.height)}px), approx ${Math.round(currentSize / 1024)} KB.`;
                         lastOperationQuality = currentQuality;
                         lastOperationDownloadFormat = 'image/jpeg';
                         downloadButton.style.display = 'inline-block';
                         break;
                     }
-                    lastBlobSize = currentSize; // Update for next iteration
+                    lastBlobSize = currentSize;
                     iteration++;
                     if (iteration === MAX_ITERATIONS) {
-                         message.textContent = `Max iterations reached. Final: ${Math.round(imageCanvas.width)}x${Math.round(imageCanvas.height)}px, approx ${Math.round(currentSize / 1024)} KB.`;
+                        const finalWidthCm = pxToCm(imageCanvas.width, currentDPI).toFixed(2);
+                        const finalHeightCm = pxToCm(imageCanvas.height, currentDPI).toFixed(2);
+                         message.textContent = `Max iterations reached. Final: ${finalWidthCm}cm x ${finalHeightCm}cm (${Math.round(imageCanvas.width)}x${Math.round(imageCanvas.height)}px), approx ${Math.round(currentSize / 1024)} KB.`;
                          lastOperationQuality = currentQuality;
                          lastOperationDownloadFormat = 'image/jpeg';
                          downloadButton.style.display = 'inline-block';
                     }
                 }
             } else {
-                // If no target KB, just set download button and quality based on dimension resize
                 downloadButton.style.display = 'inline-block';
-                lastOperationQuality = 0.9; // Default high quality for PNG
-                lastOperationDownloadFormat = 'image/png';
+                lastOperationQuality = 0.9;
             }
         });
 
