@@ -35,19 +35,23 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 12px;
-            margin-bottom: 8px;
+            gap: 18px;
+            margin-bottom: 10px;
+        }
+        .upscale-switch-row label {
+            font-weight: normal;
+            margin: 0;
         }
         #upscaleWarnings {
-            display: none;
-            max-width: 420px;
-            margin: 0 auto 12px auto;
-            padding: 10px 16px;
+            max-width: 440px;
+            margin: 0 auto 10px auto;
+            padding: 10px 15px;
             background: #fff9e5;
             border-left: 5px solid #ff9800;
             color: #b45c00;
             border-radius: 6px;
             text-align: left;
+            display: none;
         }
         #upscaleWarnings ul {
             margin: 0 0 0 18px;
@@ -63,7 +67,7 @@
     <div class="container">
         <h1>Photo Resizer (Improved v2)</h1>
         <input type="file" id="imageInput" accept="image/*">
-        
+
         <div class="unit-switch">
             <label>Units:</label>
             <input type="radio" id="unitCm" name="units" value="cm" checked>
@@ -72,11 +76,10 @@
             <label for="unitPx">px</label>
         </div>
         <div class="upscale-switch-row">
-            <label for="upscaleNo">Allow upscaling:</label>
-            <input type="radio" id="upscaleNo" name="allowUpscale" value="no" checked>
-            <label for="upscaleNo" style="font-weight:normal;">No</label>
+            <label for="upscaleYes">Yes</label>
             <input type="radio" id="upscaleYes" name="allowUpscale" value="yes">
-            <label for="upscaleYes" style="font-weight:normal;">Yes</label>
+            <label for="upscaleNo">No</label>
+            <input type="radio" id="upscaleNo" name="allowUpscale" value="no" checked>
         </div>
         <div id="upscaleWarnings">
             <ul>
@@ -140,8 +143,8 @@
         const jpegQuality = document.getElementById('jpegQuality');
         const jpegQualityValue = document.getElementById('jpegQualityValue');
         const jpegQualityRow = document.getElementById('jpegQualityRow');
-        const upscaleNo = document.getElementById('upscaleNo');
         const upscaleYes = document.getElementById('upscaleYes');
+        const upscaleNo = document.getElementById('upscaleNo');
         const upscaleWarnings = document.getElementById('upscaleWarnings');
         let originalImage = null;
         let lastOperationQuality = 0.98;
@@ -149,16 +152,16 @@
         const CM_PER_INCH = 2.54;
 
         // --- Upscale Switch ---
-        function updateUpscaleWarning() {
+        function setUpscaleWarningDisplay() {
             if (upscaleYes.checked) {
                 upscaleWarnings.style.display = "block";
             } else {
                 upscaleWarnings.style.display = "none";
             }
         }
-        upscaleNo.addEventListener('change', updateUpscaleWarning);
-        upscaleYes.addEventListener('change', updateUpscaleWarning);
-        updateUpscaleWarning();
+        upscaleYes.addEventListener('change', setUpscaleWarningDisplay);
+        upscaleNo.addEventListener('change', setUpscaleWarningDisplay);
+        setUpscaleWarningDisplay();
 
         // --- Unit Conversion ---
         const getSelectedUnit = () => document.querySelector('input[name="units"]:checked').value;
@@ -246,7 +249,7 @@
             reader.readAsDataURL(file);
         });
 
-        // --- Resize Button (High Quality, No Upscale unless allowed, Progressive Downscale) ---
+        // --- Resize Button (High Quality, No Upscale, Progressive Downscale) ---
         resizeButton.addEventListener('click', async () => {
             if (!originalImage) {
                 message.textContent = 'Please select an image first.';
@@ -282,7 +285,7 @@
                 }
                 // --- Prevent Upscale unless allowed ---
                 if (!upscaleYes.checked && (finalWidthPx > originalImage.width || finalHeightPx > originalImage.height)) {
-                    message.textContent = "Upscaling is not allowed. Please choose smaller dimensions than the original or select Yes for upscaling.";
+                    message.textContent = "Upscaling is not allowed. Please choose smaller dimensions than the original or enable upscaling.";
                     return;
                 }
                 if (finalWidthPx <= 0 || finalHeightPx <= 0) {
