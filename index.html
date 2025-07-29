@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Photo Resizer</title>
+    <style>
+        /* --- CSS Styling --- */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            text-align: center;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 30px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 25px;
+        }
+        input[type="file"] {
+            display: block;
+            margin: 0 auto 20px auto;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #e8f0fe; /* Light blue hint */
+        }
+        input[type="number"] {
+            padding: 8px 12px;
+            margin: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            width: 100px; /* Adjust width as needed */
+        }
+        label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        button {
+            padding: 12px 25px;
+            font-size: 18px;
+            margin: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        button#resizeButton {
+            background-color: #28a745; /* Green */
+            color: white;
+        }
+        button#resizeButton:hover {
+            background-color: #218838;
+            transform: translateY(-2px);
+        }
+        button#downloadButton {
+            background-color: #007bff; /* Blue */
+            color: white;
+            display: none; /* Hidden by default */
+        }
+        button#downloadButton:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+        canvas {
+            border: 2px dashed #a0a0a0;
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 25px auto;
+            background-color: #f9f9f9;
+        }
+        #message {
+            margin-top: 15px;
+            font-weight: bold;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Simple Client-Side Photo Resizer</h1>
+
+        <input type="file" id="imageInput" accept="image/*">
+        <p>
+            <label for="widthInput">New Width:</label>
+            <input type="number" id="widthInput" value="800"> px
+        </p>
+        <p>
+            <label for="heightInput">New Height (Optional):</label>
+            <input type="number" id="heightInput" placeholder="Auto" value=""> px
+        </p>
+
+        <button id="resizeButton">Resize Image</button>
+        <button id="downloadButton">Download Resized Image</button>
+
+        <div id="output">
+            <canvas id="imageCanvas"></canvas>
+            <p id="message">Select an image to begin.</p>
+        </div>
+    </div>
+
+    <script>
+        /* --- JavaScript Logic --- */
+        const imageInput = document.getElementById('imageInput');
+        const widthInput = document.getElementById('widthInput');
+        const heightInput = document.getElementById('heightInput');
+        const resizeButton = document.getElementById('resizeButton');
+        const downloadButton = document.getElementById('downloadButton');
+        const imageCanvas = document.getElementById('imageCanvas');
+        const message = document.getElementById('message');
+        const ctx = imageCanvas.getContext('2d');
+
+        let originalImage = null;
+
+        imageInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) {
+                message.textContent = 'No file selected.';
+                return;
+            }
+
+            if (!file.type.startsWith('image/')) {
+                message.textContent = 'Please select a valid image file (e.g., JPG, PNG, GIF).';
+                return;
+            }
+
+            message.textContent = 'Loading image...';
+            downloadButton.style.display = 'none'; // Hide download button until resized
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                originalImage = new Image();
+                originalImage.onload = () => {
+                    message.textContent = `Original: ${originalImage.width}x${originalImage.height}px. Enter new dimensions.`;
+                    // Pre-fill with original dimensions
+                    widthInput.value = originalImage.width;
+                    heightInput.value = originalImage.height;
+
+                    // Display original image on canvas for preview (optional, can be removed)
+                    imageCanvas.width = originalImage.width;
+                    imageCanvas.height = originalImage.height;
+                    ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+                    ctx.drawImage(originalImage, 0, 0);
+                };
+                originalImage.onerror = () => {
+                    message.textContent = 'Could not load image. It might be corrupted or unsupported.';
+                    originalImage = null;
+                };
+                originalImage.src = e.target.result;
+            };
+            reader.onerror = () => {
+                message.textContent = 'Error reading file.';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        resizeButton.addEventListener('click', () => {
+            if (!originalImage) {
+                message.textContent = 'Please select an image first.';
+                return;
+            }
+
+            let newWidth = parseInt(widthInput.value);
+            let newHeight = parseInt(heightInput.value);
+
+            if (isNaN(newWidth) || newWidth <= 0) {
+                message.textContent = 'Please enter a valid positive width.';
+                return;
+            }
+
+            // Calculate aspect ratio if height is not provided or invalid
+            if (isNaN(newHeight) || newHeight <= 0) {
+                newHeight = (originalImage.height / originalImage.width) * newWidth;
+            } else if (isNaN(newWidth) || newWidth <= 0) { // If width is invalid, but height is valid
+                newWidth = (originalImage.width / originalImage.height) * newHeight;
+            }
+
+            // Ensure dimensions are positive after calculation
+            if (newWidth <= 0 || newHeight <= 0) {
+                message.textContent = 'Calculated dimensions are invalid. Please check input.';
+                return;
+            }
+
+            message.textContent = 'Resizing...';
+
+            // Set canvas dimensions
+            imageCanvas.width = newWidth;
+            imageCanvas.height = newHeight;
+
+            // Clear previous drawings
+            ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+
+            // Draw the original image onto the canvas with the new dimensions
+            ctx.drawImage(originalImage, 0, 0, newWidth, newHeight);
+
+            message.textContent = `Image resized to ${Math.round(newWidth)}x${Math.round(newHeight)}px.`;
+            downloadButton.style.display = 'inline-block'; // Show download button
+        });
+
+        downloadButton.addEventListener('click', () => {
+            if (!originalImage || imageCanvas.width === 0 || imageCanvas.height === 0) {
+                message.textContent = 'No resized image to download.';
+                return;
+            }
+
+            // Get the image data from the canvas as a Blob (e.g., PNG)
+            // You can change 'image/png' to 'image/jpeg' if you prefer JPEG.
+            // For JPEG, the second argument (0.9) is quality (0.0 to 1.0).
+            imageCanvas.toBlob((blob) => {
+                if (blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    // Suggest a filename. You might want to make this more dynamic.
+                    a.download = 'resized_image.png'; // or .jpg
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url); // Clean up the URL object
+                    message.textContent = 'Image downloaded!';
+                } else {
+                    message.textContent = 'Failed to generate image for download.';
+                }
+            }, 'image/png', 0.9); // Change 'image/png' to 'image/jpeg' for JPEG output
+        });
+    </script>
+</body>
+</html>
