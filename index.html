@@ -66,6 +66,17 @@
             margin-right: 7px;
             margin-left: 0;
         }
+        .jpeg-quality-select-label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .jpeg-quality-select {
+            padding: 7px 12px;
+            font-size: 1em;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            margin-right: 8px;
+        }
     </style>
 </head>
 <body>
@@ -118,9 +129,16 @@
             </select>
         </div>
         <div class="row" id="jpegQualityRow">
-            <label class="slider-label" for="jpegQuality">JPEG Quality:</label>
-            <input type="range" id="jpegQuality" min="70" max="100" value="98" step="1">
-            <span id="jpegQualityValue">0.98</span>
+            <label class="jpeg-quality-select-label" for="jpegQualitySelect">JPEG Quality:</label>
+            <select id="jpegQualitySelect" class="jpeg-quality-select">
+                <option value="1.0" selected>1.0 (Best)</option>
+                <option value="0.95">0.95</option>
+                <option value="0.9">0.9</option>
+                <option value="0.85">0.85</option>
+                <option value="0.8">0.8</option>
+                <option value="0.75">0.75</option>
+                <option value="0.7">0.7</option>
+            </select>
         </div>
         <button id="resizeButton">Resize Image</button>
         <button id="downloadButton">Download Resized Image</button>
@@ -146,14 +164,13 @@
         const widthUnitLabel = document.getElementById('widthUnitLabel');
         const heightUnitLabel = document.getElementById('heightUnitLabel');
         const outputFormat = document.getElementById('outputFormat');
-        const jpegQuality = document.getElementById('jpegQuality');
-        const jpegQualityValue = document.getElementById('jpegQualityValue');
         const jpegQualityRow = document.getElementById('jpegQualityRow');
+        const jpegQualitySelect = document.getElementById('jpegQualitySelect');
         const upscaleYes = document.getElementById('upscaleYes');
         const upscaleNo = document.getElementById('upscaleNo');
         const upscaleWarnings = document.getElementById('upscaleWarnings');
         let originalImage = null;
-        let lastOperationQuality = 0.98;
+        let lastOperationQuality = 1.0;
         let lastOperationDownloadFormat = 'image/jpeg';
         const CM_PER_INCH = 2.54;
 
@@ -182,13 +199,6 @@
                 jpegQualityRow.style.display = "none";
             }
         });
-
-        // --- JPEG Quality Slider ---
-        function updateJpegQualityValue() {
-            jpegQualityValue.textContent = (jpegQuality.value / 100).toFixed(2);
-        }
-        jpegQuality.addEventListener('input', updateJpegQualityValue);
-        updateJpegQualityValue();
 
         // --- Unit Switch Event ---
         document.querySelectorAll('input[name="units"]').forEach(radio => {
@@ -318,14 +328,14 @@
             // --- File Format ---
             let format = outputFormat.value === "jpeg" ? "image/jpeg" : "image/png";
             lastOperationDownloadFormat = format;
-            lastOperationQuality = format === "image/jpeg" ? (jpegQuality.value / 100) : undefined;
+            lastOperationQuality = format === "image/jpeg" ? parseFloat(jpegQualitySelect.value) : undefined;
 
             // --- Target file size (JPEG only) ---
             if (format === "image/jpeg" && !isNaN(targetKB) && targetKB > 0) {
                 message.textContent += ` Optimizing to ~${targetKB} KB...`;
                 downloadButton.style.display = 'none';
                 const targetBytes = targetKB * 1024;
-                let currentQuality = (jpegQuality.value / 100);
+                let currentQuality = parseFloat(jpegQualitySelect.value);
                 const MAX_ITERATIONS = 50;
                 let iteration = 0;
                 let lastBlobSize = Infinity;
