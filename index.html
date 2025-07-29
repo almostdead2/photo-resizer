@@ -295,7 +295,7 @@
 
                     if (currentQuality > 0.01) {
                         currentQuality -= 0.05;
-                        if (currentQuality < 0.01) currentQuality = 0.01;
+                        if (currentQuality < 0.06) currentQuality = 0.06;
                     } else {
                         const finalWidthCm = pxToCm(imageCanvas.width, currentDPI).toFixed(2);
                         const finalHeightCm = pxToCm(imageCanvas.height, currentDPI).toFixed(2);
