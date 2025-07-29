@@ -35,15 +35,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 18px;
+            gap: 10px;
             margin-bottom: 10px;
         }
-        .upscale-switch-row label {
-            font-weight: normal;
-            margin: 0;
-        }
         #upscaleWarnings {
-            max-width: 440px;
+            max-width: 420px;
             margin: 0 auto 10px auto;
             padding: 10px 15px;
             background: #fff9e5;
@@ -61,13 +57,22 @@
         #upscaleWarnings li {
             margin-bottom: 6px;
         }
+        .upscale-label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .upscale-radio-label {
+            font-weight: normal;
+            margin-right: 7px;
+            margin-left: 0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Photo Resizer (Improved v2)</h1>
         <input type="file" id="imageInput" accept="image/*">
-
+        
         <div class="unit-switch">
             <label>Units:</label>
             <input type="radio" id="unitCm" name="units" value="cm" checked>
@@ -76,10 +81,11 @@
             <label for="unitPx">px</label>
         </div>
         <div class="upscale-switch-row">
-            <label for="upscaleYes">Yes</label>
-            <input type="radio" id="upscaleYes" name="allowUpscale" value="yes">
-            <label for="upscaleNo">No</label>
-            <input type="radio" id="upscaleNo" name="allowUpscale" value="no" checked>
+            <span class="upscale-label">Upscale:</span>
+            <input type="radio" id="upscaleYes" name="upscale" value="yes">
+            <label for="upscaleYes" class="upscale-radio-label">Yes</label>
+            <input type="radio" id="upscaleNo" name="upscale" value="no" checked>
+            <label for="upscaleNo" class="upscale-radio-label">No</label>
         </div>
         <div id="upscaleWarnings">
             <ul>
@@ -152,16 +158,16 @@
         const CM_PER_INCH = 2.54;
 
         // --- Upscale Switch ---
-        function setUpscaleWarningDisplay() {
+        function updateUpscaleWarnings() {
             if (upscaleYes.checked) {
                 upscaleWarnings.style.display = "block";
             } else {
                 upscaleWarnings.style.display = "none";
             }
         }
-        upscaleYes.addEventListener('change', setUpscaleWarningDisplay);
-        upscaleNo.addEventListener('change', setUpscaleWarningDisplay);
-        setUpscaleWarningDisplay();
+        upscaleYes.addEventListener('change', updateUpscaleWarnings);
+        upscaleNo.addEventListener('change', updateUpscaleWarnings);
+        updateUpscaleWarnings();
 
         // --- Unit Conversion ---
         const getSelectedUnit = () => document.querySelector('input[name="units"]:checked').value;
@@ -249,7 +255,7 @@
             reader.readAsDataURL(file);
         });
 
-        // --- Resize Button (High Quality, No Upscale, Progressive Downscale) ---
+        // --- Resize Button (High Quality, Optionally Allow Upscale) ---
         resizeButton.addEventListener('click', async () => {
             if (!originalImage) {
                 message.textContent = 'Please select an image first.';
