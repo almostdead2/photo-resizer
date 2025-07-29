@@ -66,6 +66,17 @@
             margin-right: 7px;
             margin-left: 0;
         }
+        .aspect-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .aspect-label {
+            font-weight: bold;
+            margin-right: 7px;
+        }
     </style>
 </head>
 <body>
@@ -93,6 +104,10 @@
                 <li>File size can increase a lot, but quality will not improve.</li>
                 <li>Upscale is rarely needed for photos; for icons/graphics, use vector images instead.</li>
             </ul>
+        </div>
+        <div class="aspect-row">
+            <input type="checkbox" id="preserveAspect">
+            <label for="preserveAspect" class="aspect-label">Preserve aspect ratio</label>
         </div>
         <p>
             <label for="widthInput">New Width:</label>
@@ -154,6 +169,7 @@
         const upscaleYes = document.getElementById('upscaleYes');
         const upscaleNo = document.getElementById('upscaleNo');
         const upscaleWarnings = document.getElementById('upscaleWarnings');
+        const preserveAspect = document.getElementById('preserveAspect');
         let originalImage = null;
         let lastOperationQuality = 1.00;
         let lastOperationDownloadFormat = 'image/jpeg';
@@ -225,6 +241,45 @@
             });
         });
 
+        // --- Aspect ratio feature ---
+        let aspectLocked = false;
+        let aspectRatio = 1;
+
+        preserveAspect.addEventListener('change', () => {
+            aspectLocked = preserveAspect.checked;
+            if (aspectLocked && originalImage) {
+                aspectRatio = originalImage.width / originalImage.height;
+            }
+        });
+
+        widthInput.addEventListener('input', function() {
+            if (aspectLocked && originalImage && this.value) {
+                const currentDPI = parseInt(dpiInput.value) || 300;
+                const selectedUnit = getSelectedUnit();
+                let w = parseFloat(this.value);
+                if (!isNaN(w) && w > 0) {
+                    let widthPx = convertToPx(w, currentDPI, selectedUnit);
+                    let heightPx = widthPx / aspectRatio;
+                    let h = convertFromPx(heightPx, currentDPI, selectedUnit);
+                    heightInput.value = selectedUnit === 'cm' ? h.toFixed(2) : Math.round(h);
+                }
+            }
+        });
+
+        heightInput.addEventListener('input', function() {
+            if (aspectLocked && originalImage && this.value) {
+                const currentDPI = parseInt(dpiInput.value) || 300;
+                const selectedUnit = getSelectedUnit();
+                let h = parseFloat(this.value);
+                if (!isNaN(h) && h > 0) {
+                    let heightPx = convertToPx(h, currentDPI, selectedUnit);
+                    let widthPx = heightPx * aspectRatio;
+                    let w = convertFromPx(widthPx, currentDPI, selectedUnit);
+                    widthInput.value = selectedUnit === 'cm' ? w.toFixed(2) : Math.round(w);
+                }
+            }
+        });
+
         // --- Image Load ---
         imageInput.addEventListener('change', (event) => {
             const file = event.target.files[0];
@@ -256,6 +311,9 @@
                     ctx.imageSmoothingEnabled = true;
                     ctx.imageSmoothingQuality = 'high';
                     ctx.drawImage(originalImage, 0, 0);
+                    if (aspectLocked) {
+                        aspectRatio = originalImage.width / originalImage.height;
+                    }
                 };
                 originalImage.onerror = () => {
                     message.textContent = 'Could not load image. It might be corrupted or unsupported.';
@@ -294,14 +352,26 @@
             if (hasDimensionInput) {
                 if (!isNaN(newWidthValue) && newWidthValue > 0) {
                     finalWidthPx = convertToPx(newWidthValue, currentDPI, selectedUnit);
-                    if (isNaN(newHeightValue) || newHeightValue <= 0) {
+                    if (aspectLocked) {
+                        finalHeightPx = finalWidthPx / (originalImage.width / originalImage.height);
+                        heightInput.value = selectedUnit === 'cm'
+                            ? convertFromPx(finalHeightPx, currentDPI, selectedUnit).toFixed(2)
+                            : Math.round(convertFromPx(finalHeightPx, currentDPI, selectedUnit));
+                    } else if (isNaN(newHeightValue) || newHeightValue <= 0) {
                         finalHeightPx = (originalImage.height / originalImage.width) * finalWidthPx;
                     } else {
                         finalHeightPx = convertToPx(newHeightValue, currentDPI, selectedUnit);
                     }
                 } else if (!isNaN(newHeightValue) && newHeightValue > 0) {
                     finalHeightPx = convertToPx(newHeightValue, currentDPI, selectedUnit);
-                    finalWidthPx = (originalImage.width / originalImage.height) * finalHeightPx;
+                    if (aspectLocked) {
+                        finalWidthPx = finalHeightPx * (originalImage.width / originalImage.height);
+                        widthInput.value = selectedUnit === 'cm'
+                            ? convertFromPx(finalWidthPx, currentDPI, selectedUnit).toFixed(2)
+                            : Math.round(convertFromPx(finalWidthPx, currentDPI, selectedUnit));
+                    } else {
+                        finalWidthPx = (originalImage.width / originalImage.height) * finalHeightPx;
+                    }
                 }
                 // --- Prevent Upscale unless allowed ---
                 if (!upscaleYes.checked && (finalWidthPx > originalImage.width || finalHeightPx > originalImage.height)) {
