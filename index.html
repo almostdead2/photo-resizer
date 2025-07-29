@@ -27,6 +27,9 @@
         }
         input[type="file"] {
             display: block;
+            width: 100%; /* Added: Make it take full available width of its parent */
+            max-width: 400px; /* Added: Limit its maximum width, adjust as needed */
+            box-sizing: border-box; /* Added: Include padding and border in the width */
             margin: 0 auto 20px auto;
             padding: 10px;
             border: 1px solid #ccc;
