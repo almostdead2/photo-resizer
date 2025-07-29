@@ -74,6 +74,16 @@
             background-color: #0056b3;
             transform: translateY(-2px);
         }
+        /* START OF ADDED CSS FOR FILE SIZE RESIZING */
+        button#resizeBySizeButton {
+            background-color: #ff9800; /* Orange */
+            color: white;
+        }
+        button#resizeBySizeButton:hover {
+            background-color: #e68a00;
+            transform: translateY(-2px);
+        }
+        /* END OF ADDED CSS FOR FILE SIZE RESIZING */
         canvas {
             border: 2px dashed #a0a0a0;
             max-width: 100%;
@@ -106,6 +116,12 @@
         <button id="resizeButton">Resize Image</button>
         <button id="downloadButton">Download Resized Image</button>
 
+        <h2>Resize by File Size</h2>
+        <p>
+            <label for="targetSizeInput">Target Size:</label>
+            <input type="number" id="targetSizeInput" value="100" min="1"> KB
+        </p>
+        <button id="resizeBySizeButton">Resize by File Size</button>
         <div id="output">
             <canvas id="imageCanvas"></canvas>
             <p id="message">Select an image to begin.</p>
@@ -236,6 +252,85 @@
                 }
             }, 'image/png', 0.9); // Change 'image/png' to 'image/jpeg' for JPEG output
         });
+
+        /* START OF ADDED JAVASCRIPT FOR FILE SIZE RESIZING */
+        const targetSizeInput = document.getElementById('targetSizeInput');
+        const resizeBySizeButton = document.getElementById('resizeBySizeButton');
+
+        resizeBySizeButton.addEventListener('click', async () => {
+            if (!originalImage) {
+                message.textContent = 'Please select an image first.';
+                return;
+            }
+
+            const targetKB = parseInt(targetSizeInput.value);
+            if (isNaN(targetKB) || targetKB <= 0) {
+                message.textContent = 'Please enter a valid positive target size in KB.';
+                return;
+            }
+
+            const targetBytes = targetKB * 1024;
+            message.textContent = `Attempting to resize to ~${targetKB} KB...`;
+            downloadButton.style.display = 'none';
+
+            let currentWidth = originalImage.width;
+            let currentHeight = originalImage.height;
+            let currentQuality = 0.9; // Start with high quality
+
+            const MAX_ITERATIONS = 50; // Safety limit
+            let iteration = 0;
+            let lastBlobSize = Infinity; // To detect if size isn't changing enough
+
+            // Function to draw and get blob
+            const getResizedBlob = (width, height, quality) => {
+                return new Promise(resolve => {
+                    imageCanvas.width = width;
+                    imageCanvas.height = height;
+                    ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+                    ctx.drawImage(originalImage, 0, 0, width, height);
+                    imageCanvas.toBlob(blob => {
+                        resolve(blob);
+                    }, 'image/jpeg', quality); // Always output as JPEG for quality control
+                });
+            };
+
+            // First, try to achieve target size by adjusting quality
+            while (iteration < MAX_ITERATIONS) {
+                const blob = await getResizedBlob(currentWidth, currentHeight, currentQuality);
+                const currentSize = blob ? blob.size : Infinity;
+
+                if (currentSize <= targetBytes || currentQuality <= 0.05) { // If target met or quality too low
+                    message.textContent = `Resized to ${Math.round(currentWidth)}x${Math.round(currentHeight)}px, approx ${Math.round(currentSize / 1024)} KB.`;
+                    downloadButton.style.display = 'inline-block';
+                    break;
+                }
+
+                // If quality is still high, try reducing quality
+                if (currentQuality > 0.1) { // Don't go below 0.1 too fast
+                    currentQuality -= 0.05; // Decrease quality
+                    if (currentQuality < 0.01) currentQuality = 0.01; // Ensure it doesn't go to zero
+                } else { // If quality is already low, start reducing dimensions
+                    if (currentSize < lastBlobSize * 0.99 && currentWidth > 100) { // Only reduce if size is still decreasing
+                        currentWidth *= 0.95; // Reduce width by 5%
+                        currentHeight = (originalImage.height / originalImage.width) * currentWidth;
+                        currentQuality = 0.9; // Reset quality when dimensions change
+                        message.textContent = `Still too large, reducing dimensions to ~${Math.round(currentWidth)}px and resetting quality.`;
+                    } else {
+                        // If dimensions are not changing much, or already very small, and size is not dropping
+                        message.textContent = `Could not reach exact ${targetKB} KB. Resized to ${Math.round(currentWidth)}x${Math.round(currentHeight)}px, approx ${Math.round(currentSize / 1024)} KB.`;
+                        downloadButton.style.display = 'inline-block';
+                        break;
+                    }
+                }
+                lastBlobSize = currentSize;
+                iteration++;
+                if (iteration === MAX_ITERATIONS) {
+                     message.textContent = `Max iterations reached. Resized to ${Math.round(currentWidth)}x${Math.round(currentHeight)}px, approx ${Math.round(currentSize / 1024)} KB.`;
+                     downloadButton.style.display = 'inline-block';
+                }
+            }
+        });
+        /* END OF ADDED JAVASCRIPT FOR FILE SIZE RESIZING */
     </script>
 </body>
 </html>
