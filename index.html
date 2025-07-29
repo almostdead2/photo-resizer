@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Photo Resizer</title>
     <style>
-        /* --- CSS Styling --- */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 20px;
@@ -27,14 +26,14 @@
         }
         input[type="file"] {
             display: block;
-            width: 100%; /* Make it take full available width of its parent */
-            max-width: 400px; /* Limit its maximum width, adjust as needed */
-            box-sizing: border-box; /* Include padding and border in the width */
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
             margin: 0 auto 20px auto;
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 5px;
-            background-color: #e8f0fe; /* Light blue hint */
+            background-color: #e8f0fe;
         }
         input[type="number"] {
             padding: 8px 12px;
@@ -42,7 +41,7 @@
             border: 1px solid #ccc;
             border-radius: 5px;
             font-size: 16px;
-            width: 100px; /* Adjust width as needed */
+            width: 100px;
         }
         label {
             font-weight: bold;
@@ -58,7 +57,7 @@
             transition: background-color 0.3s ease, transform 0.2s ease;
         }
         button#resizeButton {
-            background-color: #28a745; /* Green */
+            background-color: #28a745;
             color: white;
         }
         button#resizeButton:hover {
@@ -66,9 +65,9 @@
             transform: translateY(-2px);
         }
         button#downloadButton {
-            background-color: #007bff; /* Blue */
+            background-color: #007bff;
             color: white;
-            display: none; /* Hidden by default */
+            display: none;
         }
         button#downloadButton:hover {
             background-color: #0056b3;
@@ -87,7 +86,6 @@
             font-weight: bold;
             color: #555;
         }
-        /* New minimal style for the unit switch */
         .unit-switch {
             margin-bottom: 15px;
         }
@@ -95,11 +93,13 @@
             margin-right: 5px;
         }
         .unit-switch input[type="radio"] {
-            width: auto; /* Override default input[type="number"] width */
+            width: auto;
             margin-left: 10px;
             margin-right: 3px;
         }
     </style>
+    <!-- Pica library for high quality resizing -->
+    <script src="https://unpkg.com/pica/dist/pica.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -142,7 +142,6 @@
     </div>
 
     <script>
-        /* --- JavaScript Logic --- */
         const imageInput = document.getElementById('imageInput');
         const widthInput = document.getElementById('widthInput');
         const heightInput = document.getElementById('heightInput');
@@ -155,68 +154,55 @@
         const targetSizeInput = document.getElementById('targetSizeInput');
         const dpiInput = document.getElementById('dpiInput');
 
-        // START: Added new element references for Unit Switch
         const unitCm = document.getElementById('unitCm');
         const unitPx = document.getElementById('unitPx');
         const widthUnitLabel = document.getElementById('widthUnitLabel');
         const heightUnitLabel = document.getElementById('heightUnitLabel');
-        // END: Added new element references for Unit Switch
 
         let originalImage = null;
         let lastOperationQuality = 0.9;
         let lastOperationDownloadFormat = 'image/png';
 
-        const CM_PER_INCH = 2.54; // 1 inch = 2.54 cm
+        const CM_PER_INCH = 2.54;
 
-        // START: Modified/Added Helper Functions for Units
-        // Function to get the currently selected unit (cm or px)
+        // Unit helpers
         const getSelectedUnit = () => {
             return document.querySelector('input[name="units"]:checked').value;
         };
-
-        // Helper function to convert input value to Pixels based on selected unit
         const convertToPx = (value, dpi, unit) => {
             if (unit === 'cm') {
                 return (value / CM_PER_INCH) * dpi;
-            } else { // unit === 'px'
+            } else {
                 return value;
             }
         };
-
-        // Helper function to convert Pixels to desired unit for display
         const convertFromPx = (px, dpi, unit) => {
             if (unit === 'cm') {
                 return (px / dpi) * CM_PER_INCH;
-            } else { // unit === 'px'
+            } else {
                 return px;
             }
         };
 
-        // Event listener for unit switch (radio buttons)
         document.querySelectorAll('input[name="units"]').forEach(radio => {
             radio.addEventListener('change', () => {
                 const selectedUnit = getSelectedUnit();
                 widthUnitLabel.textContent = selectedUnit;
                 heightUnitLabel.textContent = selectedUnit;
-
-                // When unit changes, update input fields to reflect new unit (converting current value if an image is loaded)
                 if (originalImage) {
                     const currentDPI = parseInt(dpiInput.value) || 300;
                     const originalWidthPx = originalImage.width;
                     const originalHeightPx = originalImage.height;
-
                     if (selectedUnit === 'cm') {
                         widthInput.value = convertFromPx(originalWidthPx, currentDPI, 'cm').toFixed(2);
                         heightInput.value = convertFromPx(originalHeightPx, currentDPI, 'cm').toFixed(2);
-                    } else { // to 'px'
+                    } else {
                         widthInput.value = Math.round(convertFromPx(originalWidthPx, currentDPI, 'px'));
                         heightInput.value = Math.round(convertFromPx(originalHeightPx, currentDPI, 'px'));
                     }
                 }
             });
         });
-        // END: Modified/Added Helper Functions for Units
-
 
         imageInput.addEventListener('change', (event) => {
             const file = event.target.files[0];
@@ -224,38 +210,31 @@
                 message.textContent = 'No file selected.';
                 return;
             }
-
             if (!file.type.startsWith('image/')) {
                 message.textContent = 'Please select a valid image file (e.g., JPG, PNG, GIF).';
                 return;
             }
-
             message.textContent = 'Loading image...';
             downloadButton.style.display = 'none';
-
             const reader = new FileReader();
             reader.onload = (e) => {
                 originalImage = new Image();
                 originalImage.onload = () => {
                     const currentDPI = parseInt(dpiInput.value) || 300;
-                    const selectedUnit = getSelectedUnit(); // Get selected unit
-
-                    // Display original dimensions based on selected unit
+                    const selectedUnit = getSelectedUnit();
                     const displayWidth = convertFromPx(originalImage.width, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
                     const displayHeight = convertFromPx(originalImage.height, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
-                    
                     message.textContent = `Original: ${displayWidth}${selectedUnit} x ${displayHeight}${selectedUnit} (${originalImage.width}x${originalImage.height}px). Set new dimensions and/or target size.`;
-                    
-                    // Populate input fields with original dimensions based on selected unit
                     widthInput.value = displayWidth;
                     heightInput.value = displayHeight;
                     targetSizeInput.value = '';
-
                     imageCanvas.width = originalImage.width;
                     imageCanvas.height = originalImage.height;
                     ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+                    // Always set smoothing high here too
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
                     ctx.drawImage(originalImage, 0, 0);
-
                     lastOperationQuality = 0.9;
                     lastOperationDownloadFormat = 'image/png';
                 };
@@ -271,23 +250,47 @@
             reader.readAsDataURL(file);
         });
 
+        // Use Pica for high quality resize
+        const picaInstance = window.pica();
+
+        async function resizeWithPica(srcImg, srcW, srcH, dstW, dstH) {
+            // Create an offscreen canvas for the original image
+            const srcCanvas = document.createElement('canvas');
+            srcCanvas.width = srcW;
+            srcCanvas.height = srcH;
+            const srcCtx = srcCanvas.getContext('2d');
+            srcCtx.imageSmoothingEnabled = true;
+            srcCtx.imageSmoothingQuality = 'high';
+            srcCtx.clearRect(0, 0, srcW, srcH);
+            srcCtx.drawImage(srcImg, 0, 0, srcW, srcH);
+
+            imageCanvas.width = dstW;
+            imageCanvas.height = dstH;
+
+            // Use pica to resize into the main canvas
+            await picaInstance.resize(srcCanvas, imageCanvas, {
+                quality: 3,
+                alpha: false
+            });
+        }
+
         resizeButton.addEventListener('click', async () => {
             if (!originalImage) {
                 message.textContent = 'Please select an image first.';
                 return;
             }
 
-            const currentDPI = parseInt(dpiInput.value) || 300; // Get DPI value from input
+            const currentDPI = parseInt(dpiInput.value) || 300;
             if (currentDPI <= 0) {
                 message.textContent = 'DPI must be a positive number.';
                 return;
             }
 
-            const selectedUnit = getSelectedUnit(); // Get current selected unit
+            const selectedUnit = getSelectedUnit();
             let newWidthValue = parseFloat(widthInput.value);
             let newHeightValue = parseFloat(heightInput.value);
             const targetKB = parseInt(targetSizeInput.value);
-            
+
             let finalWidthPx = originalImage.width;
             let finalHeightPx = originalImage.height;
 
@@ -295,30 +298,23 @@
 
             if (hasDimensionInput) {
                 if (!isNaN(newWidthValue) && newWidthValue > 0) {
-                    finalWidthPx = convertToPx(newWidthValue, currentDPI, selectedUnit); // Use new converter
+                    finalWidthPx = convertToPx(newWidthValue, currentDPI, selectedUnit);
                     if (isNaN(newHeightValue) || newHeightValue <= 0) {
                         finalHeightPx = (originalImage.height / originalImage.width) * finalWidthPx;
                     } else {
-                        finalHeightPx = convertToPx(newHeightValue, currentDPI, selectedUnit); // Use new converter
+                        finalHeightPx = convertToPx(newHeightValue, currentDPI, selectedUnit);
                     }
-                } 
-                else if (!isNaN(newHeightValue) && newHeightValue > 0) {
-                    finalHeightPx = convertToPx(newHeightValue, currentDPI, selectedUnit); // Use new converter
+                } else if (!isNaN(newHeightValue) && newHeightValue > 0) {
+                    finalHeightPx = convertToPx(newHeightValue, currentDPI, selectedUnit);
                     finalWidthPx = (originalImage.width / originalImage.height) * finalHeightPx;
                 }
-
                 if (finalWidthPx <= 0 || finalHeightPx <= 0) {
                     message.textContent = 'Calculated dimensions are invalid. Please check input.';
                     return;
                 }
-
                 message.textContent = 'Resizing by dimensions...';
-                imageCanvas.width = finalWidthPx;
-                imageCanvas.height = finalHeightPx;
-                ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
-                ctx.drawImage(originalImage, 0, 0, finalWidthPx, finalHeightPx);
-                
-                // Display resized dimensions based on selected unit
+                // Use Pica for best quality
+                await resizeWithPica(originalImage, originalImage.width, originalImage.height, Math.round(finalWidthPx), Math.round(finalHeightPx));
                 const resizedWidthDisplay = convertFromPx(finalWidthPx, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
                 const resizedHeightDisplay = convertFromPx(finalHeightPx, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
                 message.textContent = `Image resized to ${resizedWidthDisplay}${selectedUnit} x ${resizedHeightDisplay}${selectedUnit} (${Math.round(finalWidthPx)}x${Math.round(finalHeightPx)}px).`;
@@ -327,25 +323,24 @@
                 imageCanvas.width = originalImage.width;
                 imageCanvas.height = originalImage.height;
                 ctx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
                 ctx.drawImage(originalImage, 0, 0);
-                // Display original dimensions based on selected unit
                 const originalWidthDisplay = convertFromPx(originalImage.width, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
                 const originalHeightDisplay = convertFromPx(originalImage.height, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
                 message.textContent = `Using original dimensions: ${originalWidthDisplay}${selectedUnit} x ${originalHeightDisplay}${selectedUnit} (${originalImage.width}x${originalImage.height}px).`;
                 lastOperationDownloadFormat = 'image/png';
             }
-            
+
+            // Target file size optimization
             if (!isNaN(targetKB) && targetKB > 0) {
                 message.textContent += ` Optimizing to ~${targetKB} KB...`;
                 downloadButton.style.display = 'none';
-
                 const targetBytes = targetKB * 1024;
                 let currentQuality = 0.9;
-
                 const MAX_ITERATIONS = 50;
                 let iteration = 0;
-                let lastBlobSize = Infinity; 
-                
+                let lastBlobSize = Infinity;
                 const getCanvasBlob = (quality) => {
                     return new Promise(resolve => {
                         imageCanvas.toBlob(blob => {
@@ -353,13 +348,10 @@
                         }, 'image/jpeg', quality);
                     });
                 };
-
                 while (iteration < MAX_ITERATIONS) {
                     const blob = await getCanvasBlob(currentQuality);
                     const currentSize = blob ? blob.size : Infinity;
-                    
                     if (currentSize <= targetBytes || currentQuality <= 0.01) {
-                        // Display final dimensions based on selected unit
                         const finalWidthDisplay = convertFromPx(imageCanvas.width, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
                         const finalHeightDisplay = convertFromPx(imageCanvas.height, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
                         message.textContent = `Final: ${finalWidthDisplay}${selectedUnit} x ${finalHeightDisplay}${selectedUnit} (${Math.round(imageCanvas.width)}x${Math.round(imageCanvas.height)}px), approx ${Math.round(currentSize / 1024)} KB.`;
@@ -368,12 +360,10 @@
                         downloadButton.style.display = 'inline-block';
                         break;
                     }
-
                     if (currentQuality > 0.01) {
                         currentQuality -= 0.05;
                         if (currentQuality < 0.01) currentQuality = 0.01;
                     } else {
-                        // Display final dimensions based on selected unit
                         const finalWidthDisplay = convertFromPx(imageCanvas.width, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
                         const finalHeightDisplay = convertFromPx(imageCanvas.height, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
                         message.textContent = `Could not reach ${targetKB} KB at current dimensions. Final: ${finalWidthDisplay}${selectedUnit} x ${finalHeightDisplay}${selectedUnit} (${Math.round(imageCanvas.width)}x${Math.round(imageCanvas.height)}px), approx ${Math.round(currentSize / 1024)} KB.`;
@@ -385,13 +375,12 @@
                     lastBlobSize = currentSize;
                     iteration++;
                     if (iteration === MAX_ITERATIONS) {
-                        // Display final dimensions based on selected unit
                         const finalWidthDisplay = convertFromPx(imageCanvas.width, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
                         const finalHeightDisplay = convertFromPx(imageCanvas.height, currentDPI, selectedUnit).toFixed(selectedUnit === 'cm' ? 2 : 0);
-                         message.textContent = `Max iterations reached. Final: ${finalWidthDisplay}${selectedUnit} x ${finalHeightDisplay}${selectedUnit} (${Math.round(imageCanvas.width)}x${Math.round(imageCanvas.height)}px), approx ${Math.round(currentSize / 1024)} KB.`;
-                         lastOperationQuality = currentQuality;
-                         lastOperationDownloadFormat = 'image/jpeg';
-                         downloadButton.style.display = 'inline-block';
+                        message.textContent = `Max iterations reached. Final: ${finalWidthDisplay}${selectedUnit} x ${finalHeightDisplay}${selectedUnit} (${Math.round(imageCanvas.width)}x${Math.round(imageCanvas.height)}px), approx ${Math.round(currentSize / 1024)} KB.`;
+                        lastOperationQuality = currentQuality;
+                        lastOperationDownloadFormat = 'image/jpeg';
+                        downloadButton.style.display = 'inline-block';
                     }
                 }
             } else {
@@ -405,7 +394,6 @@
                 message.textContent = 'No resized image to download.';
                 return;
             }
-
             imageCanvas.toBlob((blob) => {
                 if (blob) {
                     const url = URL.createObjectURL(blob);
