@@ -9,7 +9,8 @@
         .container { max-width: 800px; margin: 30px auto; padding: 30px; background-color: #ffffff; border-radius: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); }
         h1 { color: #2c3e50; margin-bottom: 25px; }
         input[type="file"] { display: block; width: 100%; max-width: 400px; box-sizing: border-box; margin: 0 auto 20px auto; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background-color: #e8f0fe; }
-        input[type="number"], input[type="range"] { padding: 8px 12px; margin: 5px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; width: 100px; }
+        input[type="number"] { padding: 8px 12px; margin: 5px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; width: 100px; }
+        input[type="range"] { margin: 5px; vertical-align: middle; width: 200px; }
         label { font-weight: bold; margin-right: 10px; }
         button { padding: 12px 25px; font-size: 18px; margin: 10px; border: none; border-radius: 5px; cursor: pointer; transition: background-color 0.3s ease, transform 0.2s ease; }
         button#resizeButton { background-color: #28a745; color: white; }
@@ -24,6 +25,13 @@
         .row { margin: 8px 0; }
         .slider-label { font-size: 1em; }
         .output-format-row { margin-bottom: 10px; }
+        /* Flex container for JPEG quality row */
+        #jpegQualityRow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
     </style>
 </head>
 <body>
@@ -63,7 +71,7 @@
         </div>
         <div class="row" id="jpegQualityRow">
             <label class="slider-label" for="jpegQuality">JPEG Quality:</label>
-            <input type="range" id="jpegQuality" min="70" max="100" value="98">
+            <input type="range" id="jpegQuality" min="70" max="100" value="98" step="1">
             <span id="jpegQualityValue">0.98</span>
         </div>
         <button id="resizeButton">Resize Image</button>
