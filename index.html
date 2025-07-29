@@ -305,7 +305,7 @@
                 }
                 // --- Prevent Upscale unless allowed ---
                 if (!upscaleYes.checked && (finalWidthPx > originalImage.width || finalHeightPx > originalImage.height)) {
-                    message.textContent = "Upscaling is not allowed. Please choose smaller dimensions than the original or enable upscaling.";
+                    message.textContent = "Enable Upscaling from above by selecting Yes in Upscale section. Upscaling is not allowed by default. Please choose smaller dimensions than the original.";
                     return;
                 }
                 if (finalWidthPx <= 0 || finalHeightPx <= 0) {
