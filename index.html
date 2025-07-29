@@ -25,12 +25,37 @@
         .row { margin: 8px 0; }
         .slider-label { font-size: 1em; }
         .output-format-row { margin-bottom: 10px; }
-        /* Flex container for JPEG quality row */
         #jpegQualityRow {
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 12px;
+        }
+        .upscale-switch-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        #upscaleWarnings {
+            max-width: 420px;
+            margin: 0 auto 10px auto;
+            padding: 10px 15px;
+            background: #fff9e5;
+            border-left: 5px solid #ff9800;
+            color: #b45c00;
+            border-radius: 6px;
+            text-align: left;
+            display: none;
+        }
+        #upscaleWarnings ul {
+            margin: 0 0 0 18px;
+            padding: 0;
+            font-size: 0.97em;
+        }
+        #upscaleWarnings li {
+            margin-bottom: 6px;
         }
     </style>
 </head>
@@ -45,6 +70,17 @@
             <label for="unitCm">cm</label>
             <input type="radio" id="unitPx" name="units" value="px">
             <label for="unitPx">px</label>
+        </div>
+        <div class="upscale-switch-row">
+            <input type="checkbox" id="allowUpscale">
+            <label for="allowUpscale" style="margin:0;font-weight:normal;">Allow upscaling</label>
+        </div>
+        <div id="upscaleWarnings">
+            <ul>
+                <li>Images may become blurry, pixelated, or stretched.</li>
+                <li>File size can increase a lot, but quality will not improve.</li>
+                <li>Upscale is rarely needed for photos; for icons/graphics, use vector images instead.</li>
+            </ul>
         </div>
         <p>
             <label for="widthInput">New Width:</label>
@@ -101,10 +137,17 @@
         const jpegQuality = document.getElementById('jpegQuality');
         const jpegQualityValue = document.getElementById('jpegQualityValue');
         const jpegQualityRow = document.getElementById('jpegQualityRow');
+        const allowUpscale = document.getElementById('allowUpscale');
+        const upscaleWarnings = document.getElementById('upscaleWarnings');
         let originalImage = null;
         let lastOperationQuality = 0.98;
         let lastOperationDownloadFormat = 'image/jpeg';
         const CM_PER_INCH = 2.54;
+
+        // --- Upscale Switch ---
+        allowUpscale.addEventListener('change', () => {
+            upscaleWarnings.style.display = allowUpscale.checked ? "block" : "none";
+        });
 
         // --- Unit Conversion ---
         const getSelectedUnit = () => document.querySelector('input[name="units"]:checked').value;
@@ -192,7 +235,7 @@
             reader.readAsDataURL(file);
         });
 
-        // --- Resize Button (High Quality, No Upscale, Progressive Downscale) ---
+        // --- Resize Button (High Quality, Optional Upscale, Progressive Downscale) ---
         resizeButton.addEventListener('click', async () => {
             if (!originalImage) {
                 message.textContent = 'Please select an image first.';
@@ -226,9 +269,9 @@
                     finalHeightPx = convertToPx(newHeightValue, currentDPI, selectedUnit);
                     finalWidthPx = (originalImage.width / originalImage.height) * finalHeightPx;
                 }
-                // --- Prevent Upscale ---
-                if (finalWidthPx > originalImage.width || finalHeightPx > originalImage.height) {
-                    message.textContent = "Upscaling is not allowed. Please choose smaller dimensions than the original.";
+                // --- Prevent Upscale unless allowed ---
+                if (!allowUpscale.checked && (finalWidthPx > originalImage.width || finalHeightPx > originalImage.height)) {
+                    message.textContent = "Upscaling is not allowed. Please choose smaller dimensions than the original or enable upscaling.";
                     return;
                 }
                 if (finalWidthPx <= 0 || finalHeightPx <= 0) {
