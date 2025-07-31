@@ -325,7 +325,6 @@
                 message.textContent = 'Error reading file.';
             };
             reader.readAsDataURL(file);
-            fileNameLabel.textContent = file.name;
             event.target.value = '';
         });
 
